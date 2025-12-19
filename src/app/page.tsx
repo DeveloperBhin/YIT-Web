@@ -17,7 +17,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const newSocket = io('http://localhost:3001', {
+    const newSocket = io('http://localhost:3002', {
       transports: ['websocket', 'polling'],
       reconnection: true,
     });
