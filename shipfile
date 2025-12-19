@@ -1,1 +1,5 @@
-run:out
+name: frontends
+version: 0.1.0
+build: npm install && npm run build && next export
+run: out
+runtime: static
