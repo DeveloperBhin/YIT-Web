@@ -3,3 +3,5 @@ version: "1.0.0"
 build: npm install && npm run build
 run: out
 runtime: static
+
+
