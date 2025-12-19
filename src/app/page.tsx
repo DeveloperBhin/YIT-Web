@@ -17,37 +17,48 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const newSocket = io(' http://localhost:3000', {
+    const newSocket: Socket = io('https://yit-card-game.deploy.tz', {
       transports: ['websocket', 'polling'],
       reconnection: true,
+      secure: true,
     });
 
     setSocket(newSocket);
 
-    newSocket.on('connect', () => setIsConnected(true));
+    // Connection events
+    newSocket.on('connect', () => {
+      console.log('✅ Connected to server:', newSocket.id);
+      setIsConnected(true);
+      setError(null);
+    });
+
     newSocket.on('disconnect', () => {
+      console.log('⚠️ Disconnected from server');
       setIsConnected(false);
       setCurrentRoom(null);
       setGameState(null);
       setPlayer(null);
     });
 
-    // Update global game state
-    newSocket.on('game_state', (data: { game: GameState }) => {
-      setGameState(data.game);
+    newSocket.on('connect_error', (err) => {
+      console.error('❌ Socket connection error:', err.message);
+      setError(`Connection error: ${err.message}`);
     });
 
-    // Update individual player's hand
+    // Game state updates
+    newSocket.on('game_state', (data: { game: GameState }) => setGameState(data.game));
+
+    // Individual player updates
     newSocket.on('playerCards', (data: { cards: Card[] }) => {
-      setPlayer((prev) => prev ? { ...prev, cards: data.cards } : null);
+      setPlayer((prev) => (prev ? { ...prev, cards: data.cards } : null));
     });
 
-    // Handle errors
+    // Error messages from server
     newSocket.on('game_error', (data: { message?: string }) => {
       setError(data.message || 'Unknown error');
     });
 
-    // When game is created or joined
+    // Room creation/joining
     newSocket.on('game_room_created', (data: { room: Room; player: Player }) => {
       setCurrentRoom(data.room);
       setPlayer(data.player);
