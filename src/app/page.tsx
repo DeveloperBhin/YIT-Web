@@ -17,7 +17,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const newSocket: Socket = io('https://yit-card-game.deploy.tz', {
+    const newSocket: Socket = io('https://yit-apis.onrender.com/', {
       transports: ['websocket', 'polling'],
       reconnection: true,
       secure: true,
