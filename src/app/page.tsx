@@ -90,16 +90,18 @@ export default function Home() {
           <p>Connecting to game server...</p>
         </div>
       ) : currentRoom && player && socket ? (
-        <GameRoom
-          socket={socket}
-          gameId={currentRoom.gameId}
-          playerId={player.id}
-          playerName={player.name}
-          onLeaveRoom={handleLeaveRoom}
-          gameState={gameState}
-          currentRoom={currentRoom}
-          player={player}
-        />
+       <GameRoom
+  socket={socket}
+  gameId={currentRoom.gameId}
+  playerId={player.id}
+  playerName={player.name}
+  gameState={gameState}
+  setGameState={setGameState} // ✅ add this
+  currentRoom={currentRoom}
+  player={player}
+  onLeaveRoom={handleLeaveRoom}
+/>
+
       ) : (
         <GameLobby
           socket={socket}

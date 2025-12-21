@@ -9,8 +9,8 @@ export interface Card {
 export interface Player {
   id: string;
   name: string;
-  cards?: Card[]; // undefined for other players
-  cardsCount?: number; // total cards for other players
+  cards?: Card[];       // Only for the current player
+  cardsCount?: number;  // For other players
   hasUno: boolean;
   isHost: boolean;
   score: number;
@@ -18,9 +18,12 @@ export interface Player {
 
 export interface Room {
   gameId: string;
-  host?: string; // optional, may not be in server response
+  host?: string;
+  hostName?:string;
   playerCount?: number;
   maxPlayers?: number;
+    currentPlayers?: number; // ✅ add this
+
   players?: Player[];
   isPrivate?: boolean;
   settings?: {
@@ -35,10 +38,10 @@ export interface GameState {
   status: 'waiting' | 'playing' | 'finished';
   currentPlayerId: string | null;
   direction: 'clockwise' | 'counterclockwise';
-  topCard: Card | null; // discardPileTop in server
+  topCard: Card | null;          // For reference
+  discardPileTop: Card | null;   // Use this in UI
   drawPileCount: number;
-  discardPileTop: Card | null;
-  drawPile?: Card[]; // optional if you never send full pile
+  drawPile?: Card[];
   discardPile?: Card[];
   players: Player[];
   winner?: Player | null;
@@ -46,6 +49,8 @@ export interface GameState {
   currentColor?: 'red' | 'blue' | 'green' | 'yellow';
   drawCount?: number;
   skipCount?: number;
-    gameStatus: 'waiting' | 'playing' | 'finished';
 
+  // Extra fields needed by GameRoom
+  gameStatus: 'waiting' | 'playing' | 'finished';
+  maxPlayers: number;            // ✅ Added to fix TS errors
 }
