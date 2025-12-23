@@ -24,15 +24,19 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    try {
-      const res = await api.post("/signup", form);
-      alert("Signup successful!");
-      router.push("/login");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Signup failed");
-    } finally {
-      setLoading(false);
-    }
+   try {
+  const res = await api.post("signup", form);
+  alert("Signup successful!");
+  router.push("/login");
+} catch (err: any) {
+  if (err.response?.data?.errors) {
+    console.log(err.response.data.errors); // <-- structured errors
+    setError(err.response.data.errors.map((e: any) => e.message).join(", "));
+  } else {
+    setError(err.response?.data?.message || "Signup failed");
+  }
+}
+
   };
 
   return (
@@ -70,6 +74,10 @@ export default function RegisterPage() {
           <a href="/login" className="text-blue-600 font-medium">
             Login
           </a>
+          <button
+          onClick={() => router.push("/login")}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-all shadow-md"
+        ></button>
         </p>
       </form>
     </div>
