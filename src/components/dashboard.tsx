@@ -22,7 +22,7 @@ export default function Home() {
   useEffect(() => {
   if (typeof window === 'undefined') return;
 
-  const socketInstance = io('https://yit-apis.onrender.com', {
+  const socketInstance = io('https://yit-apis.onrender.com/', {
     transports: ['websocket', 'polling'],
     reconnection: true,
   });
