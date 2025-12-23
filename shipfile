@@ -1,5 +1,16 @@
 name: yit-web
 version: "1.0.0"
-build: npm install && npm run build
+
+# Build step: install dependencies and build Next.js
+build: |
+  npm install
+  npm run build
+
+# Run step: start the Next.js server
 run: npm start
-runtime: node
+
+# Runtime type
+runtime: nodejs
+
+# Optional: expose port 3000
+
