@@ -69,16 +69,16 @@ export default function RegisterPage() {
           {loading ? "Registering..." : "Register"}
         </button>
 
-        <p className="text-center text-sm mt-3">
-          Already have an account?{" "}
-          <a href="/login" className="text-blue-600 font-medium">
-            Login
-          </a>
-          <button
-          onClick={() => router.push("/login")}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-all shadow-md"
-        ></button>
-        </p>
+        <p className="text-center text-sm text-black mt-3">
+  Already have an account?{" "}
+  <button
+    onClick={() => router.push("/login")}
+    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md"
+  >
+    Login
+  </button>
+</p>
+
       </form>
     </div>
   );

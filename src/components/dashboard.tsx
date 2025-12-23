@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import Particles from '@tsparticles/react';
+import { loadFull } from 'tsparticles';
 import GameLobby from './GameLobby';
 import GameRoom from './GameRoom';
-import { GameState, Player, Room, Card } from '../types/game';
+import { GameState, Player, Room } from '../types/game';
 
 export default function Home() {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -16,39 +17,40 @@ export default function Home() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
 
-  // -----------------------
-  // Socket.io Setup
-  // -----------------------
-  useEffect(() => {
-  if (typeof window === 'undefined') return;
-
-  const socketInstance = io('https://yit-apis.onrender.com/', {
-    transports: ['websocket', 'polling'],
-    reconnection: true,
-  });
-
-  setSocket(socketInstance);
-
-  socketInstance.on('connect', () => {
-    console.log('✅ Connected:', socketInstance.id);
-    setIsConnected(true);  // ✅ Update state
-  });
-
-  socketInstance.on('disconnect', () => {
-    console.log('⚠️ Disconnected');
-    setIsConnected(false);
-  });
-
-  socketInstance.on('connect_error', (err) => {
-    console.error('❌ Socket connection error:', err.message);
-    setError(`Connection error: ${err.message}`);
-  });
-
-  return () => {
-    socketInstance.disconnect();
+  // Initialize tsparticles
+  const particlesInit = async (engine: any) => {
+    await loadFull(engine);
   };
-}, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const socketInstance = io('https://yit-apis.onrender.com/', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+    });
+
+    setSocket(socketInstance);
+
+    socketInstance.on('connect', () => {
+      console.log('✅ Connected:', socketInstance.id);
+      setIsConnected(true);
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('⚠️ Disconnected');
+      setIsConnected(false);
+    });
+
+    socketInstance.on('connect_error', (err) => {
+      console.error('❌ Socket connection error:', err.message);
+      setError(`Connection error: ${err.message}`);
+    });
+
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, []);
 
   const handleLeaveRoom = () => {
     if (socket && player && currentRoom) {
@@ -61,7 +63,6 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-[#0B1E4F] text-white flex flex-col items-center justify-center overflow-hidden">
-      {/* Particles Background */}
       <Particles
         id="tsparticles"
         options={{
@@ -83,7 +84,6 @@ export default function Home() {
         className="absolute inset-0 -z-10"
       />
 
-      {/* Animated Title */}
       <motion.h1
         className="text-5xl font-bold mb-8 animate-pulse"
         initial={{ opacity: 0, y: -50, scale: 0.8 }}
@@ -93,10 +93,7 @@ export default function Home() {
         🎮 YIT UNO Game
       </motion.h1>
 
-      {/* Connection/Error Handling */}
-      {!isConnected && !error && (
-        <p className="mb-4">Connecting to game server...</p>
-      )}
+      {!isConnected && !error && <p className="mb-4">Connecting to game server...</p>}
       {error && (
         <motion.div
           className="bg-red-600 px-4 py-2 rounded-lg mb-4"
@@ -107,7 +104,6 @@ export default function Home() {
         </motion.div>
       )}
 
-      {/* Main Content: Lobby / Room */}
       <AnimatePresence mode="wait">
         {isConnected && socket && currentRoom && player ? (
           <motion.div
@@ -119,15 +115,14 @@ export default function Home() {
             className="w-full"
           >
             <GameRoom
-  socket={socket}
-  gameId={currentRoom.gameId}
-  gameState={gameState}
-  setGameState={setGameState}
-  currentRoom={currentRoom}
-  player={player} // ✅ pass the whole player object
-  onLeaveRoom={handleLeaveRoom}
-/>
-
+              socket={socket}
+              gameId={currentRoom.gameId}
+              gameState={gameState}
+              setGameState={setGameState}
+              currentRoom={currentRoom}
+              player={player}
+              onLeaveRoom={handleLeaveRoom}
+            />
           </motion.div>
         ) : isConnected && socket ? (
           <motion.div
