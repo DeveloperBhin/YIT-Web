@@ -25,7 +25,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const res = await api.post("signup", form);
+      const res = await api.post("/signup", form);
       alert("Signup successful!");
       router.push("/login");
     } catch (err: any) {
