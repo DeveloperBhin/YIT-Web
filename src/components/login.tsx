@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await api.post("/login", form);
+      const res = await api.post("login", form);
       localStorage.setItem("token", res.data.token);
       alert("Login successful!");
       router.push("/dashboard"); // redirect to homepage or dashboard
