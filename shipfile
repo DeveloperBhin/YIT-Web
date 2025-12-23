@@ -1,5 +1,7 @@
 name: yit-web
 version: "1.0.0"
 build: npm install && npm run build
-start: npm start
-type: web
+run: npm start
+runtime: static
+
+
