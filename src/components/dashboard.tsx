@@ -26,7 +26,7 @@ export default function Home() {
     if (typeof window === 'undefined') return;
 
     const socketInstance = io('https://yit-apis.onrender.com/', {
-      transports: ['', 'polling'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
     });
 
