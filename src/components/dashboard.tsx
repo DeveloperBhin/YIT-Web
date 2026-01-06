@@ -25,10 +25,18 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const socketInstance = io('https://yit-apis.onrender.com/', {
-      transports: ['polling'],
-      reconnection: true,
-    });
+    // const socketInstance = io('https://yit-apis.onrender.com/', {
+    //   transports: ['polling'],
+    //   reconnection: true,
+    // });
+
+
+const socketInstance = io("https://yit-apis.onrender.com", {
+  transports: ["polling"],   // ⛔ disables websocket entirely
+  upgrade: false,            // ⛔ prevents retry attempts
+  reconnection: true,
+  reconnectionDelay: 2000,
+});
 
     setSocket(socketInstance);
 
