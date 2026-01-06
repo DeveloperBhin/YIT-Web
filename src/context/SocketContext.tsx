@@ -10,7 +10,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const s = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.tz', {
-      transports: ['websocket'],
+      transports: ['polling'],
     });
     setSocket(s);
 
