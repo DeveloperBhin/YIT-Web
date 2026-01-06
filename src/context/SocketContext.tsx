@@ -9,7 +9,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const s = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.tz', {
+    const s = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.com', {
       transports: ['polling'],
     });
     setSocket(s);
