@@ -117,12 +117,16 @@ const savedToken = localStorage.getItem('token');
 
   // Join room
   const handleJoinRoom = () => {
-    if (!socket) return setError('Socket not connected');
-    if (!token) return setError('You must be logged in');
-    if (!roomCode.trim()) return setError('Enter a room code');
-    setError('');
-    socket.emit('join_game', { gameId: roomCode, token });
-  };
+  if (!socket) return setError('Socket not connected');
+  if (!token) return setError('You must be logged in');
+  if (!roomCode.trim()) return setError('Enter a room code');
+
+  setError('');
+  console.log('Joining room:', roomCode);
+  
+  socket.emit('join_game', { gameId: roomCode, token });
+};
+
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen text-white bg-[#0B1E4F] overflow-hidden">
