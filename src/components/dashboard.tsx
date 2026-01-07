@@ -1,69 +1,67 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useContext, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Particles from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
+
 import GameLobby from './GameLobby';
 import GameRoom from './GameRoom';
 import { GameState, Player, Room } from '../types/game';
+import { SocketContext } from '../context/SocketContext';
 
 export default function Home() {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const socket = useContext(SocketContext); // ✅ single socket source
+
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
 
-  // Initialize tsparticles
+  // tsparticles init
   const particlesInit = async (engine: any) => {
     await loadFull(engine);
   };
 
+  // socket lifecycle
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!socket) return;
 
-    // const socketInstance = io('https://yit-apis.onrender.com/', {
-    //   transports: ['polling'],
-    //   reconnection: true,
-    // });
-
-
-const socketInstance = io("https://yit-apis.onrender.com", {
-  // transports: ["polling"],   // ⛔ disables websocket entirely
-  upgrade: false,            // ⛔ prevents retry attempts
-  reconnection: true,
-  reconnectionDelay: 2000,
-});
-
-    setSocket(socketInstance);
-
-    socketInstance.on('connect', () => {
-      console.log('✅ Connected:', socketInstance.id);
+    const onConnect = () => {
+      console.log('✅ Connected:', socket.id);
       setIsConnected(true);
-    });
+    };
 
-    socketInstance.on('disconnect', () => {
+    const onDisconnect = () => {
       console.log('⚠️ Disconnected');
       setIsConnected(false);
-    });
+    };
 
-    socketInstance.on('connect_error', (err) => {
-      console.error('❌ Socket connection error:', err.message);
-      setError(`Connection error: ${err.message}`);
-    });
+    const onError = (err: any) => {
+      console.error('❌ Socket error:', err.message);
+      setError(err.message);
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onError);
 
     return () => {
-      socketInstance.disconnect();
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onError);
     };
-  }, []);
+  }, [socket]);
 
   const handleLeaveRoom = () => {
     if (socket && player && currentRoom) {
-      socket.emit('leave_game', { playerId: player.id, gameId: currentRoom.gameId });
+      socket.emit('leave_game', {
+        token: localStorage.getItem('token'),
+        gameId: currentRoom.gameId,
+      });
     }
+
     setCurrentRoom(null);
     setPlayer(null);
     setGameState(null);
@@ -71,26 +69,7 @@ const socketInstance = io("https://yit-apis.onrender.com", {
 
   return (
     <div className="relative min-h-screen bg-[#0B1E4F] text-white flex flex-col items-center justify-center overflow-hidden">
-      <Particles
-        id="tsparticles"
-        options={{
-          background: { color: { value: '#0B1E4F' } },
-          fpsLimit: 60,
-          interactivity: {
-            events: { onHover: { enable: true, mode: 'repulse' } },
-            modes: { repulse: { distance: 200, duration: 0.4 } },
-          },
-          particles: {
-            color: { value: '#FFD700' },
-            links: { enable: true, color: '#FFD700', distance: 150 },
-            move: { enable: true, speed: 2 },
-            number: { value: 40 },
-            opacity: { value: 0.7 },
-            size: { value: { min: 2, max: 5 } },
-          },
-        }}
-        className="absolute inset-0 -z-10"
-      />
+     <Particles id="tsparticles" options={{ background: { color: { value: '#0B1E4F' } }, fpsLimit: 60, interactivity: { events: { onHover: { enable: true, mode: 'repulse' } }, modes: { repulse: { distance: 200, duration: 0.4 } }, }, particles: { color: { value: '#FFD700' }, links: { enable: true, color: '#FFD700', distance: 150 }, move: { enable: true, speed: 2 }, number: { value: 40 }, opacity: { value: 0.7 }, size: { value: { min: 2, max: 5 } }, }, }} className="absolute inset-0 -z-10" />
 
       <motion.h1
         className="text-5xl font-bold mb-8 animate-pulse"
@@ -101,7 +80,11 @@ const socketInstance = io("https://yit-apis.onrender.com", {
         🎮 YIT UNO Game
       </motion.h1>
 
-      {!isConnected && !error && <p className="mb-4">Connecting to game server...</p>}
+      {!socket && <p className="mb-4">Initializing socket…</p>}
+      {socket && !isConnected && !error && (
+        <p className="mb-4">Connecting to game server…</p>
+      )}
+
       {error && (
         <motion.div
           className="bg-red-600 px-4 py-2 rounded-lg mb-4"
