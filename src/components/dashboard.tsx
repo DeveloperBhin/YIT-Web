@@ -32,7 +32,7 @@ export default function Home() {
 
 
 const socketInstance = io("https://yit-apis.onrender.com", {
-  transports: ["polling"],   // ⛔ disables websocket entirely
+  // transports: ["polling"],   // ⛔ disables websocket entirely
   upgrade: false,            // ⛔ prevents retry attempts
   reconnection: true,
   reconnectionDelay: 2000,
