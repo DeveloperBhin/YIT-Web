@@ -10,8 +10,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const s = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.com', {
-      // transports: ['polling'],
+      autoConnect: true,
+      withCredentials: true,
     });
+
+    s.on('connect', () => console.log('✅ Connected:', s.id));
+    s.on('disconnect', (reason) => console.log('⚠️ Disconnected:', reason));
+    s.on('connect_error', (err) => console.log('❌ Connect error:', err));
+
     setSocket(s);
 
     return () => {
