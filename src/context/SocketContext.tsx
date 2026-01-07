@@ -9,14 +9,21 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const s = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.com', {
-      autoConnect: true,
-      withCredentials: true,
-    });
+    const s = io(
+      process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.com',
+      {
+        withCredentials: true,
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5,
+      }
+    );
 
     s.on('connect', () => console.log('✅ Connected:', s.id));
-    s.on('disconnect', (reason) => console.log('⚠️ Disconnected:', reason));
-    s.on('connect_error', (err) => console.log('❌ Connect error:', err));
+    s.on('disconnect', () => console.log('⚠️ Disconnected'));
+    s.on('connect_error', (err) =>
+      console.error('❌ Socket error:', err.message)
+    );
 
     setSocket(s);
 
@@ -25,5 +32,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
+  return (
+    <SocketContext.Provider value={socket}>
+      {children}
+    </SocketContext.Provider>
+  );
 }
