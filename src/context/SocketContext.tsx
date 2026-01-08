@@ -27,9 +27,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     setSocket(s);
 
-    return () => {
-      s.disconnect();
-    };
+    // return () => {
+    //   s.disconnect();
+    // };
   }, []);
 
   return (
