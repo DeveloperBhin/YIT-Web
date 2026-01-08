@@ -42,7 +42,7 @@ export default function GameRoom({
 
   // Decode JWT from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('jwtToken');
+const token = localStorage.getItem('token');
     if (token) {
       try {
         const decoded: TokenPayload = jwtDecode(token);
@@ -64,20 +64,23 @@ export default function GameRoom({
   }, [socket]);
 
   // Game updates
-  useEffect(() => {
-    if (!socket || !user) return;
-    const handleGameUpdate = (updatedGame: GameState) => {
-      setGameState(updatedGame);
-      const me = updatedGame.players.find((p) => p.id === user.id);
-      if (me) setPlayerCards(me.cards || []);
-    };
-    socket.on('game_started', handleGameUpdate);
-    socket.on('game_updated', handleGameUpdate);
-    return () => {
-      socket.off('game_started', handleGameUpdate);
-      socket.off('game_updated', handleGameUpdate);
-    };
-  }, [socket, setGameState, user]);
+ useEffect(() => {
+  if (!socket || !user) return;
+
+  const handleGameState = (game: GameState) => {
+    console.log('🎮 game_state received:', game);
+    setGameState(game);
+
+    const me = game.players.find((p) => p.id === user.id);
+    if (me) setPlayerCards(me.cards || []);
+  };
+
+  socket.on('game_state', handleGameState);
+
+  return () => {
+    socket.off('game_state', handleGameState);
+  };
+}, [socket, user, setGameState]);
 
   const handleDrawCard = () => {
     if (!user) return;
