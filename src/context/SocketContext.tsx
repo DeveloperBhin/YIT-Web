@@ -13,7 +13,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       process.env.NEXT_PUBLIC_SOCKET_URL || 'https://yit-apis.onrender.com',
       {
         withCredentials: true,
-        transports: ['websocket', 'polling'],
+        transports: ['polling','websocket'],
         reconnection: true,
         reconnectionAttempts: 5,
       }
