@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Particles from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
@@ -11,7 +10,7 @@ import GameLobby from './GameLobby';
 import GameRoom from './GameRoom';
 import { GameState, Player, Room } from '../types/game';
 import { SocketContext } from '../context/SocketContext';
-import { jwtDecode } from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode'; // ✅ fixed import
 
 interface TokenPayload {
   id: string;
@@ -36,9 +35,8 @@ export default function Dashboard() {
 
   const [tokenLoaded, setTokenLoaded] = useState(false); // ✅ track token load
 
-
   // Decode JWT once on load
- useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
