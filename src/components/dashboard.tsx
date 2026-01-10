@@ -10,7 +10,7 @@ import GameLobby from './GameLobby';
 import GameRoom from './GameRoom';
 import { GameState, Player, Room } from '../types/game';
 import { SocketContext } from '../context/SocketContext';
-import {jwtDecode} from 'jwt-decode'; // ✅ fixed import
+import {jwtDecode} from 'jwt-decode';
 
 interface TokenPayload {
   id: string;
@@ -26,14 +26,11 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [user, setUser] = useState<TokenPayload | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
-
-  const [tokenLoaded, setTokenLoaded] = useState(false); // ✅ track token load
 
   // Decode JWT once on load
   useEffect(() => {
@@ -49,8 +46,6 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Invalid token', err);
       router.push('/login');
-    } finally {
-      setTokenLoaded(true); // mark token as loaded
     }
   }, [router]);
 
@@ -58,16 +53,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!socket) return;
 
-    const onConnect = () => {
-      console.log('✅ Connected:', socket.id);
-      setIsConnected(true);
-    };
-
-    const onDisconnect = () => {
-      console.log('⚠️ Disconnected');
-      setIsConnected(false);
-    };
-
+    const onConnect = () => console.log('✅ Connected:', socket.id);
+    const onDisconnect = () => console.log('⚠️ Disconnected');
     const onError = (err: any) => {
       console.error('❌ Socket error:', err.message);
       setError(err.message);
@@ -94,13 +81,12 @@ export default function Dashboard() {
     setGameState(null);
   };
 
-  // tsparticles init
   const particlesInit = async (engine: any) => {
     await loadFull(engine);
   };
 
-  // Render loading if socket or token not ready
-  if (!socket || !tokenLoaded) {
+  // ✅ Show lobby immediately if socket exists, connection is optional
+  if (!socket || !user) {
     return (
       <div className="relative min-h-screen flex items-center justify-center text-white bg-[#0B1E4F]">
         <p>Initializing…</p>
@@ -140,8 +126,6 @@ export default function Dashboard() {
         🎮 YIT UNO Game
       </motion.h1>
 
-      {!isConnected && !error && <p className="mb-4">Connecting to game server…</p>}
-
       {error && (
         <motion.div
           className="bg-red-600 px-4 py-2 rounded-lg mb-4"
@@ -153,7 +137,7 @@ export default function Dashboard() {
       )}
 
       <AnimatePresence mode="wait">
-        {isConnected && currentRoom && player ? (
+        {currentRoom && player ? (
           <motion.div
             key="gameRoom"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -173,7 +157,6 @@ export default function Dashboard() {
             />
           </motion.div>
         ) : (
-          isConnected &&
           <motion.div
             key="gameLobby"
             initial={{ opacity: 0, y: 20 }}
