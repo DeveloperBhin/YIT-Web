@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Socket } from 'socket.io-client';
-import { jwtDecode } from 'jwt-decode';
-
 import { GameState as BaseGameState, Player, Room, Card } from '../types/game';
 import PlayerList from './PlayerList';
 
-export interface GameState extends BaseGameState {
+interface GameState extends BaseGameState {
   gameStatus: 'waiting' | 'playing' | 'finished';
+}
+
+interface TokenPayload {
+  id: string;
+  first_name: string;
+  second_name: string;
+  email: string;
+  phone_number: string;
+  token?: string;
 }
 
 interface GameRoomProps {
@@ -19,14 +26,7 @@ interface GameRoomProps {
   currentRoom: Room;
   player: Player;
   onLeaveRoom: () => void;
-}
-
-interface TokenPayload {
-  id: string;
-  first_name: string;
-  second_name: string;
-  email: string;
-  phone_number: string;
+  user: TokenPayload;
 }
 
 export default function GameRoom({
@@ -37,98 +37,45 @@ export default function GameRoom({
   currentRoom,
   player,
   onLeaveRoom,
+  user,
 }: GameRoomProps) {
   const [playerCards, setPlayerCards] = useState<Card[]>(player.cards || []);
-  const [user, setUser] = useState<TokenPayload | null>(null);
 
-  // ✅ Decode JWT once (client-side)
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-const decoded = jwtDecode<TokenPayload>(token);
-      setUser(decoded);
-    } catch (error) {
-      console.error('❌ Invalid token', error);
-    }
-  }, []);
-
-  // ✅ Listen for game state updates
-  useEffect(() => {
-    if (!socket || !user) return;
-
-    const handleGameState = (game: GameState) => {
-      console.log('🎮 game_state received:', game);
-      setGameState(game);
-
-      const me = game.players.find((p) => p.id === user.id);
-      if (me) {
-        setPlayerCards(me.cards || []);
-      }
-    };
-
-    socket.on('game_state', handleGameState);
-    return () => {
-      socket.off('game_state', handleGameState);
-    };
-  }, [socket, user, setGameState]);
-
-  // ✅ Optional: player cards updates
+  // Listen for game state updates
   useEffect(() => {
     if (!socket) return;
 
-    const handlePlayerCards = (data: { cards: Card[] }) => {
-      setPlayerCards(data.cards);
+    const handleGameState = (game: GameState) => {
+      setGameState(game);
+      const me = game.players.find((p) => p.id === user.id);
+      if (me) setPlayerCards(me.cards || []);
     };
+    
 
-    socket.on('playerCards', handlePlayerCards);
-    return () => {
-      socket.off('playerCards', handlePlayerCards);
-    };
-  }, [socket]);
+    socket.on('game_state', handleGameState);
+    return () => {socket.off('game_state', handleGameState)};
+  }, [socket, user, setGameState]);
 
-  // --- Actions ---
-  const handleDrawCard = () => {
-    if (!user) return;
-    socket.emit('draw_card', { playerId: user.id, gameId });
-  };
+  
 
-  const handlePlayCard = (index: number, chosenColor: string | null = null) => {
-    if (!user) return;
-    socket.emit('play_card', {
-      gameId,
-      playerId: user.id,
-      cardIndex: index,
-      chosenColor,
-    });
-  };
+  const handleDrawCard = () => socket.emit('draw_card', { playerId: user.id, gameId });
+  const handlePlayCard = (index: number, chosenColor: string | null = null) =>
+    socket.emit('play_card', { gameId, playerId: user.id, cardIndex: index, chosenColor });
+  const handleStartGame = () => socket.emit('start_game', { gameId });
 
-  const handleStartGame = () => {
-    socket.emit('start_game', { gameId });
-  };
-
-  if (!gameState || !user) {
-    return <div>Loading game...</div>;
-  }
+  if (!gameState) return <div>Loading...</div>;
 
   return (
     <div className="p-4">
       <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">Room: {currentRoom.gameId}</h2>
-        <button
-          className="bg-red-600 px-3 py-1 rounded"
-          onClick={onLeaveRoom}
-        >
-          Leave Room
+        <h2 className="text-xl font-bold">Game Room {currentRoom.gameId}</h2>
+        <button className="bg-red-600 px-3 py-1 rounded" onClick={onLeaveRoom}>
+          Leave Game
         </button>
       </div>
 
       {player.isHost && gameState.gameStatus === 'waiting' && (
-        <button
-          className="bg-green-600 px-3 py-1 rounded mb-4"
-          onClick={handleStartGame}
-        >
+        <button className="bg-green-600 px-3 py-1 rounded mb-4" onClick={handleStartGame}>
           Start Game
         </button>
       )}
@@ -169,17 +116,18 @@ const decoded = jwtDecode<TokenPayload>(token);
             </div>
           ))}
         </div>
-        <button
-          className="mt-2 bg-green-600 px-3 py-1 rounded"
-          onClick={handleDrawCard}
-        >
+        <button className="mt-2 bg-green-600 px-3 py-1 rounded" onClick={handleDrawCard}>
           Draw Card
         </button>
       </div>
 
       <div className="mt-4">
-        <p><strong>Game Status:</strong> {gameState.gameStatus}</p>
-        <p><strong>Current Turn:</strong> {gameState.currentPlayerId}</p>
+        <p>
+          <strong>Game Status:</strong> {gameState.gameStatus}
+        </p>
+        <p>
+          <strong>Current Turn:</strong> {gameState.currentPlayerId}
+        </p>
       </div>
     </div>
   );

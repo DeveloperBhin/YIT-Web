@@ -26,6 +26,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [user, setUser] = useState<TokenPayload | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -39,6 +40,7 @@ export default function Dashboard() {
       router.push('/login');
       return;
     }
+
     try {
       const decoded = jwtDecode<TokenPayload>(token);
       decoded.token = token;
@@ -53,12 +55,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (!socket) return;
 
-    const onConnect = () => console.log('✅ Connected:', socket.id);
-    const onDisconnect = () => console.log('⚠️ Disconnected');
-    const onError = (err: any) => {
-      console.error('❌ Socket error:', err.message);
-      setError(err.message);
-    };
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+    const onError = (err: any) => setError(err.message);
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -71,7 +70,6 @@ export default function Dashboard() {
     };
   }, [socket]);
 
-  // Leave room
   const handleLeaveRoom = () => {
     if (socket && currentRoom && user?.token) {
       socket.emit('leave_game', { token: user.token, gameId: currentRoom.gameId });
@@ -84,15 +82,6 @@ export default function Dashboard() {
   const particlesInit = async (engine: any) => {
     await loadFull(engine);
   };
-
-  // ✅ Show lobby immediately if socket exists, connection is optional
-  if (!socket || !user) {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center text-white bg-[#0B1E4F]">
-        <p>Initializing…</p>
-      </div>
-    );
-  }
 
   return (
     <div className="relative min-h-screen bg-[#0B1E4F] text-white flex flex-col items-center justify-center overflow-hidden">
@@ -117,35 +106,17 @@ export default function Dashboard() {
         className="absolute inset-0 -z-10"
       />
 
-      <motion.h1
-        className="text-5xl font-bold mb-8 animate-pulse"
-        initial={{ opacity: 0, y: -50, scale: 0.8 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 1 }}
-      >
+      <motion.h1 className="text-5xl font-bold mb-8 animate-pulse">
         🎮 YIT UNO Game
       </motion.h1>
 
-      {error && (
-        <motion.div
-          className="bg-red-600 px-4 py-2 rounded-lg mb-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {error}
-        </motion.div>
-      )}
+      {!socket && <p className="mb-4">Initializing socket…</p>}
+      {socket && !isConnected && !error && <p className="mb-4">Connecting to game server…</p>}
+      {error && <div className="bg-red-600 px-4 py-2 rounded mb-4">{error}</div>}
 
       <AnimatePresence mode="wait">
-        {currentRoom && player ? (
-          <motion.div
-            key="gameRoom"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
-          >
+        {isConnected && socket && currentRoom && player && user ? (
+          <motion.div key="gameRoom" className="w-full">
             <GameRoom
               socket={socket}
               gameId={currentRoom.gameId}
@@ -154,17 +125,11 @@ export default function Dashboard() {
               currentRoom={currentRoom}
               player={player}
               onLeaveRoom={handleLeaveRoom}
+              user={user}
             />
           </motion.div>
-        ) : (
-          <motion.div
-            key="gameLobby"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
-          >
+        ) : isConnected && socket && user ? (
+          <motion.div key="gameLobby" className="w-full">
             <GameLobby
               socket={socket}
               setCurrentRoom={setCurrentRoom}
@@ -172,7 +137,7 @@ export default function Dashboard() {
               setGameState={setGameState}
             />
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );
