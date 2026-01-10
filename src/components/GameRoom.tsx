@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Socket } from 'socket.io-client';
+import { jwtDecode } from 'jwt-decode';
+
 import { GameState as BaseGameState, Player, Room, Card } from '../types/game';
 import PlayerList from './PlayerList';
-import * as jwtDecode from 'jwt-decode';
 
 export interface GameState extends BaseGameState {
   gameStatus: 'waiting' | 'playing' | 'finished';
@@ -26,7 +27,6 @@ interface TokenPayload {
   second_name: string;
   email: string;
   phone_number: string;
-  token?: string;
 }
 
 export default function GameRoom({
@@ -41,41 +41,54 @@ export default function GameRoom({
   const [playerCards, setPlayerCards] = useState<Card[]>(player.cards || []);
   const [user, setUser] = useState<TokenPayload | null>(null);
 
-  // Decode JWT once
+  // ✅ Decode JWT once (client-side)
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
+
     try {
-    const decoded = (jwtDecode as any)(token) as TokenPayload;
-      decoded.token = token;
+      const decoded = jwtDecode<TokenPayload>(token);
       setUser(decoded);
-    } catch (err) {
-      console.error('Invalid token', err);
+    } catch (error) {
+      console.error('❌ Invalid token', error);
     }
   }, []);
 
-   useEffect(() => {
-const token = localStorage.getItem('token');
-    if (token) {
-      try {
-            const decoded = (jwtDecode as any)(token) as TokenPayload;
-        
-        setUser(decoded);
-      } catch (err) {
-        console.error('Invalid token', err);
+  // ✅ Listen for game state updates
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleGameState = (game: GameState) => {
+      console.log('🎮 game_state received:', game);
+      setGameState(game);
+
+      const me = game.players.find((p) => p.id === user.id);
+      if (me) {
+        setPlayerCards(me.cards || []);
       }
-    }
-  }, []);
+    };
 
-  // Player cards updates
+    socket.on('game_state', handleGameState);
+    return () => {
+      socket.off('game_state', handleGameState);
+    };
+  }, [socket, user, setGameState]);
+
+  // ✅ Optional: player cards updates
   useEffect(() => {
     if (!socket) return;
-    const handlePlayerCards = (data: { cards: Card[] }) => setPlayerCards(data.cards);
+
+    const handlePlayerCards = (data: { cards: Card[] }) => {
+      setPlayerCards(data.cards);
+    };
+
     socket.on('playerCards', handlePlayerCards);
     return () => {
       socket.off('playerCards', handlePlayerCards);
     };
   }, [socket]);
+
+  // --- Actions ---
   const handleDrawCard = () => {
     if (!user) return;
     socket.emit('draw_card', { playerId: user.id, gameId });
@@ -83,22 +96,39 @@ const token = localStorage.getItem('token');
 
   const handlePlayCard = (index: number, chosenColor: string | null = null) => {
     if (!user) return;
-    socket.emit('play_card', { gameId, playerId: user.id, cardIndex: index, chosenColor });
+    socket.emit('play_card', {
+      gameId,
+      playerId: user.id,
+      cardIndex: index,
+      chosenColor,
+    });
   };
 
-  const handleStartGame = () => socket.emit('start_game', { gameId });
+  const handleStartGame = () => {
+    socket.emit('start_game', { gameId });
+  };
 
-  if (!gameState || !user) return <div>Loading game...</div>;
+  if (!gameState || !user) {
+    return <div>Loading game...</div>;
+  }
 
   return (
     <div className="p-4">
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-bold">Room: {currentRoom.gameId}</h2>
-        <button className="bg-red-600 px-3 py-1 rounded" onClick={onLeaveRoom}>Leave Room</button>
+        <button
+          className="bg-red-600 px-3 py-1 rounded"
+          onClick={onLeaveRoom}
+        >
+          Leave Room
+        </button>
       </div>
 
       {player.isHost && gameState.gameStatus === 'waiting' && (
-        <button className="bg-green-600 px-3 py-1 rounded mb-4" onClick={handleStartGame}>
+        <button
+          className="bg-green-600 px-3 py-1 rounded mb-4"
+          onClick={handleStartGame}
+        >
           Start Game
         </button>
       )}
@@ -106,27 +136,45 @@ const token = localStorage.getItem('token');
       <div className="mb-4">
         <h3 className="font-semibold">Top Card:</h3>
         <div className="inline-block w-16 h-24 flex items-center justify-center bg-gray-700 rounded border border-white/30">
-          {gameState.discardPileTop ? `${gameState.discardPileTop.color} ${gameState.discardPileTop.value}` : 'No cards yet'}
+          {gameState.discardPileTop
+            ? `${gameState.discardPileTop.color} ${gameState.discardPileTop.value}`
+            : 'No cards yet'}
         </div>
       </div>
 
       <div className="mb-4">
         <h3 className="font-semibold">Players:</h3>
         {gameState.players.length > 0 ? (
-          <PlayerList players={gameState.players} currentPlayerId={gameState.currentPlayerId || ''} gameStatus={gameState.gameStatus} currentUserId={user.id} />
-        ) : <p>Waiting for players...</p>}
+          <PlayerList
+            players={gameState.players}
+            currentPlayerId={gameState.currentPlayerId || ''}
+            gameStatus={gameState.gameStatus}
+            currentUserId={user.id}
+          />
+        ) : (
+          <p>Waiting for players...</p>
+        )}
       </div>
 
       <div className="mt-4">
         <h3 className="font-semibold">Your Hand:</h3>
         <div className="flex gap-2 flex-wrap mt-2">
           {playerCards.map((card, index) => (
-            <div key={index} className="w-16 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded border border-white/30 flex items-center justify-center cursor-pointer hover:scale-105 transition" onClick={() => handlePlayCard(index)}>
+            <div
+              key={index}
+              className="w-16 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded border border-white/30 flex items-center justify-center cursor-pointer hover:scale-105 transition"
+              onClick={() => handlePlayCard(index)}
+            >
               {card.color} {card.value}
             </div>
           ))}
         </div>
-        <button className="mt-2 bg-green-600 px-3 py-1 rounded" onClick={handleDrawCard}>Draw Card</button>
+        <button
+          className="mt-2 bg-green-600 px-3 py-1 rounded"
+          onClick={handleDrawCard}
+        >
+          Draw Card
+        </button>
       </div>
 
       <div className="mt-4">
