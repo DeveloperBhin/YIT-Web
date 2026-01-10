@@ -71,6 +71,14 @@ export default function Dashboard() {
     };
   }, [socket]);
 
+  useEffect(() => {
+  console.log('🧠 Dashboard state snapshot', {
+    currentRoom,
+    player,
+    gameState,
+  });
+}, [currentRoom, player, gameState]);
+
   // Leave room
   const handleLeaveRoom = () => {
     if (socket && currentRoom && user?.token) {
