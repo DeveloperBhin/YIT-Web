@@ -79,6 +79,8 @@ export default function Dashboard() {
   });
 }, [currentRoom, player, gameState]);
 
+
+
   // Leave room
   const handleLeaveRoom = () => {
     if (socket && currentRoom && user?.token) {
@@ -144,46 +146,46 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      <AnimatePresence mode="wait">
-        {currentRoom && player ? (
-          <motion.div
-            key="gameRoom"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
-          >
-         <GameRoom
-  socket={socket}
-  gameId={currentRoom.gameId}
-  currentRoom={currentRoom}
-  player={player}
-  user={user}
-  gameState={gameState}
-  setGameState={setGameState}
-  onLeaveRoom={handleLeaveRoom}
-/>
+     <AnimatePresence>
+  {currentRoom ? (
+    <motion.div
+      key="gameRoom"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3 }}
+      className="w-full"
+    >
+      <GameRoom
+        socket={socket}
+        gameId={currentRoom.gameId}
+        currentRoom={currentRoom}
+        player={player!}
+        gameState={gameState}
+        setGameState={setGameState}
+        onLeaveRoom={handleLeaveRoom}
+        user={user}
+      />
+    </motion.div>
+  ) : (
+    <motion.div
+      key="gameLobby"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="w-full"
+    >
+      <GameLobby
+        socket={socket}
+        setCurrentRoom={setCurrentRoom}
+        setPlayer={setPlayer}
+        setGameState={setGameState}
+      />
+    </motion.div>
+  )}
+</AnimatePresence>
 
-          </motion.div>
-        ) : (
-          <motion.div
-            key="gameLobby"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
-          >
-            <GameLobby
-              socket={socket}
-              setCurrentRoom={setCurrentRoom}
-              setPlayer={setPlayer}
-              setGameState={setGameState}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

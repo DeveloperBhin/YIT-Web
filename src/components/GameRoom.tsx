@@ -58,6 +58,14 @@ export default function GameRoom({
     });
   }, [socket, gameId, user.id]);
 
+  useEffect(() => {
+  console.log('📤 Requesting game state', { gameId, playerId: user.id });
+  socket.emit('get_game_state', {
+    gameId,
+    playerId: user.id,
+  });
+}, [socket, gameId, user.id]);
+
   /* ---------- LISTEN FOR GAME STATE ---------- */
   useEffect(() => {
     if (!socket) {
