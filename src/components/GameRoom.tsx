@@ -5,6 +5,8 @@ import { Socket } from 'socket.io-client';
 import { GameState as BaseGameState, Player, Room, Card } from '../types/game';
 import PlayerList from './PlayerList';
 
+/* ---------- TYPES ---------- */
+
 interface GameState extends BaseGameState {
   gameStatus: 'waiting' | 'playing' | 'finished';
 }
@@ -29,6 +31,8 @@ interface GameRoomProps {
   user: TokenPayload;
 }
 
+/* ---------- COMPONENT ---------- */
+
 export default function GameRoom({
   socket,
   gameId,
@@ -40,46 +44,129 @@ export default function GameRoom({
   user,
 }: GameRoomProps) {
   const [playerCards, setPlayerCards] = useState<Card[]>(player.cards || []);
+  const [loading, setLoading] = useState(true);
 
-  // Listen for game state updates
+  /* ---------- REQUEST GAME STATE ON MOUNT ---------- */
   useEffect(() => {
     if (!socket) return;
 
-    const handleGameState = (game: GameState) => {
+    console.log('📤 Requesting game state', { gameId, playerId: user.id });
+
+    socket.emit('get_game_state', {
+      gameId,
+      playerId: user.id,
+    });
+  }, [socket, gameId, user.id]);
+
+  /* ---------- LISTEN FOR GAME STATE ---------- */
+  useEffect(() => {
+    if (!socket) {
+      console.warn('❌ socket not available');
+      return;
+    }
+
+    console.log('🟢 GameRoom mounted, listening for game_state');
+
+    const handleGameState = (payload: any) => {
+      console.log('🎮 game_state payload received:', payload);
+
+      // ✅ Handle wrapped or raw payload
+      const game: GameState | undefined = payload?.game ?? payload;
+
+      if (!game || !game.players) {
+        console.error('❌ Invalid game state structure', payload);
+        return;
+      }
+
       setGameState(game);
+      setLoading(false);
+
+      // 🔍 Match player safely
       const me = game.players.find((p) => p.id === user.id);
-      if (me) setPlayerCards(me.cards || []);
+
+      if (!me) {
+        console.warn('⚠️ Player not found in game.players', {
+          jwtUserId: user.id,
+          players: game.players.map((p) => p.id),
+        });
+      } else {
+        setPlayerCards(me.cards || []);
+      }
     };
-    
 
     socket.on('game_state', handleGameState);
-    return () => {socket.off('game_state', handleGameState)};
-  }, [socket, user, setGameState]);
 
-  
+    return () => {
+      console.log('🔴 GameRoom unmounted, removing listener');
+      socket.off('game_state', handleGameState);
+    };
+  }, [socket, user.id, setGameState]);
 
-  const handleDrawCard = () => socket.emit('draw_card', { playerId: user.id, gameId });
-  const handlePlayCard = (index: number, chosenColor: string | null = null) =>
-    socket.emit('play_card', { gameId, playerId: user.id, cardIndex: index, chosenColor });
-  const handleStartGame = () => socket.emit('start_game', { gameId });
+  /* ---------- ACTIONS ---------- */
+  const handleDrawCard = () => {
+    console.log('🃏 draw_card');
+    socket.emit('draw_card', { gameId, playerId: user.id });
+  };
 
-  if (!gameState) return <div>Loading...</div>;
+  const handlePlayCard = (index: number, chosenColor: string | null = null) => {
+    console.log('▶️ play_card', { index, chosenColor });
+    socket.emit('play_card', {
+      gameId,
+      playerId: user.id,
+      cardIndex: index,
+      chosenColor,
+    });
+  };
 
+  const handleStartGame = () => {
+    console.log('🚀 start_game');
+    socket.emit('start_game', { gameId });
+  };
+
+  /* ---------- UI STATES ---------- */
+  if (loading) {
+    return (
+      <div className="p-4 text-yellow-400">
+        Waiting for game state…
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    return (
+      <div className="p-4 text-red-400">
+        Failed to load game state
+      </div>
+    );
+  }
+
+  /* ---------- RENDER ---------- */
   return (
     <div className="p-4">
+      {/* Header */}
       <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">Game Room {currentRoom.gameId}</h2>
-        <button className="bg-red-600 px-3 py-1 rounded" onClick={onLeaveRoom}>
+        <h2 className="text-xl font-bold">
+          Game Room {currentRoom.gameId}
+        </h2>
+        <button
+          className="bg-red-600 px-3 py-1 rounded"
+          onClick={onLeaveRoom}
+        >
           Leave Game
         </button>
       </div>
 
+      {/* Host Controls */}
       {player.isHost && gameState.gameStatus === 'waiting' && (
-        <button className="bg-green-600 px-3 py-1 rounded mb-4" onClick={handleStartGame}>
+        <button
+          className="bg-green-600 px-3 py-1 rounded mb-4"
+          onClick={handleStartGame}
+        >
           Start Game
         </button>
       )}
 
+      {/* Discard Pile */}
       <div className="mb-4">
         <h3 className="font-semibold">Top Card:</h3>
         <div className="inline-block w-16 h-24 flex items-center justify-center bg-gray-700 rounded border border-white/30">
@@ -89,6 +176,7 @@ export default function GameRoom({
         </div>
       </div>
 
+      {/* Players */}
       <div className="mb-4">
         <h3 className="font-semibold">Players:</h3>
         {gameState.players.length > 0 ? (
@@ -99,12 +187,14 @@ export default function GameRoom({
             currentUserId={user.id}
           />
         ) : (
-          <p>Waiting for players...</p>
+          <p>Waiting for players…</p>
         )}
       </div>
 
+      {/* Player Hand */}
       <div className="mt-4">
         <h3 className="font-semibold">Your Hand:</h3>
+
         <div className="flex gap-2 flex-wrap mt-2">
           {playerCards.map((card, index) => (
             <div
@@ -116,18 +206,19 @@ export default function GameRoom({
             </div>
           ))}
         </div>
-        <button className="mt-2 bg-green-600 px-3 py-1 rounded" onClick={handleDrawCard}>
+
+        <button
+          className="mt-2 bg-green-600 px-3 py-1 rounded"
+          onClick={handleDrawCard}
+        >
           Draw Card
         </button>
       </div>
 
-      <div className="mt-4">
-        <p>
-          <strong>Game Status:</strong> {gameState.gameStatus}
-        </p>
-        <p>
-          <strong>Current Turn:</strong> {gameState.currentPlayerId}
-        </p>
+      {/* Debug Info */}
+      <div className="mt-4 text-sm opacity-70">
+        <p><strong>Status:</strong> {gameState.gameStatus}</p>
+        <p><strong>Current Turn:</strong> {gameState.currentPlayerId}</p>
       </div>
     </div>
   );
