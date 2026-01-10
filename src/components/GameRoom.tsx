@@ -47,7 +47,7 @@ export default function GameRoom({
     if (!token) return;
 
     try {
-      const decoded = jwtDecode<TokenPayload>(token);
+const decoded = jwtDecode<TokenPayload>(token);
       setUser(decoded);
     } catch (error) {
       console.error('❌ Invalid token', error);

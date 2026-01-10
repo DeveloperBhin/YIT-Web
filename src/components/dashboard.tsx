@@ -11,7 +11,7 @@ import GameLobby from './GameLobby';
 import GameRoom from './GameRoom';
 import { GameState, Player, Room } from '../types/game';
 import { SocketContext } from '../context/SocketContext';
-import * as jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 interface TokenPayload {
   id: string;
@@ -42,7 +42,8 @@ export default function Dashboard() {
       return;
     }
     try {
-    const decoded = (jwtDecode as any)(token) as TokenPayload;
+    const decoded = jwtDecode<TokenPayload>(token);
+    
       decoded.token = token;
       setUser(decoded);
     } catch (err) {

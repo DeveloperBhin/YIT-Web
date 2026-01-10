@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Room, Player, GameState } from '../types/game';
 import Particles from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
-import * as jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 interface GameLobbyProps {
   socket: Socket | null;
@@ -46,7 +46,8 @@ export default function GameLobby({
       return;
     }
     try {
-    const decoded = (jwtDecode as any)(savedToken) as TokenPayload;
+    const decoded = jwtDecode<TokenPayload>(savedToken);
+    
       decoded.token = savedToken; // store token for emits
       setUser(decoded);
     } catch (err) {
