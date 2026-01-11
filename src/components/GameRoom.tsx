@@ -76,22 +76,26 @@ export default function GameRoom({
 
     console.log('🟢 GameRoom mounted → listening for game_state');
 
-    const handleGameState = (payload: any) => {
-      console.log('🔥 RAW payload:', payload);
+   const handleGameState = (payload: any) => {
+  console.log('🔥 RAW payload from server:', payload);
 
-      const game = payload?.game ?? payload;
+  // Check if the server sent 'game' or sent the object directly
+  const game = payload?.game ?? payload;
 
-      if (!game || !Array.isArray(game.players)) {
-        console.error('❌ Invalid game_state payload', payload);
-        return;
-      }
+  console.log('🧩 Parsed game object:', game);
 
-      setGameState(game);
-      setLoading(false);
+  if (!game || !Array.isArray(game.players)) {
+    console.error('❌ Invalid game_state payload:', payload);
+    return;
+  }
 
-      const me = game.players.find((p: Player) => p.id === userId);
-      if (me) setPlayerCards(me.cards ?? []);
-    };
+  setGameState(game);
+  setLoading(false);
+
+  const me = game.players.find((p: Player) => p.id === userId);
+  if (me) setPlayerCards(me.cards ?? []);
+};
+
 
     socket.on('game_state', handleGameState);
     listenerAttached.current = true;
