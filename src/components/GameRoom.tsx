@@ -68,43 +68,54 @@ export default function GameRoom({
 playerId:userId});
   }, [ready, socket, gameId, userId]);
 
-  /* ---------- LISTEN FOR GAME STATE ---------- */
+//   /* ---------- LISTEN FOR GAME STATE ---------- */
 
-  useEffect(() => {
-    if (!socket || listenerAttached.current) return;
+//   useEffect(() => {
+//     if (!socket || listenerAttached.current) return;
 
-    console.log('🟢 GameRoom mounted → listening for game_state');
+//     console.log('🟢 GameRoom mounted → listening for game_state');
 
-   const handleGameState = (payload: any) => {
-  console.log('🔥 RAW payload from server:', payload);
+//    const handleGameState = (payload: any) => {
+//   console.log('🔥 RAW payload from server:', payload);
 
-  // Check if the server sent 'game' or sent the object directly
-  const game = payload?.game ?? payload;
+//   // Check if the server sent 'game' or sent the object directly
+//   const game = payload?.game ?? payload;
 
-  console.log('🧩 Parsed game object:', game);
+//   console.log('🧩 Parsed game object:', game);
 
-  if (!game || !Array.isArray(game.players)) {
-    console.error('❌ Invalid game_state payload:', payload);
-    return;
-  }
+//   if (!game || !Array.isArray(game.players)) {
+//     console.error('❌ Invalid game_state payload:', payload);
+//     return;
+//   }
 
-  setGameState(game);
+//   setGameState(game);
+//   setLoading(false);
+
+//   const me = game.players.find((p: Player) => p.id === userId);
+//   if (me) setPlayerCards(me.cards ?? []);
+// };
+
+
+//     socket.on('game_state', handleGameState);
+//     listenerAttached.current = true;
+
+//     return () => {
+//       console.log('🔴 GameRoom unmounted → removing listener');
+//       socket.off('game_state', handleGameState);
+//       listenerAttached.current = false;
+//     };
+//   }, [socket, userId, setGameState]);
+
+
+useEffect(() => {
+  if (!gameState) return;
+
   setLoading(false);
 
-  const me = game.players.find((p: Player) => p.id === userId);
+  const me = gameState.players.find((p: Player) => p.id === userId);
   if (me) setPlayerCards(me.cards ?? []);
-};
+}, [gameState, userId]);
 
-
-    socket.on('game_state', handleGameState);
-    listenerAttached.current = true;
-
-    return () => {
-      console.log('🔴 GameRoom unmounted → removing listener');
-      socket.off('game_state', handleGameState);
-      listenerAttached.current = false;
-    };
-  }, [socket, userId, setGameState]);
 
   /* ---------- ACTIONS ---------- */
 

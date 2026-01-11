@@ -101,29 +101,32 @@ export default function Dashboard() {
 
   // Attach raw listener for debugging
   useEffect(() => {
-    if (!socket) return;
+  if (!socket || !user?.id) return;
 
-    const handleGameState = (payload: any) => {
-      console.log('🔥 RAW payload from server:', payload);
-      setRawGameState(payload); // Save raw payload
+  const handleGameState = (payload: any) => {
+    console.log('🔥 RAW payload from server:', payload);
 
-      const game = payload?.game ?? payload;
-      if (!game || !Array.isArray(game.players)) {
-        console.error('❌ Invalid game_state payload', payload);
-        return;
-      }
+    if (!payload?.game) {
+      console.error('❌ Invalid game_state payload', payload);
+      return;
+    }
 
-      setGameState(game);
-      const me = game.players.find((p: Player) => p.id === user?.id);
-      if (me) setPlayer(me);
-    };
+    const game = payload.game;
 
-    socket.on('game_state', handleGameState);
+    setRawGameState(payload);
+    setGameState(game);
 
-    return () => {
-      socket.off('game_state', handleGameState);
-    };
-  }, [socket, user?.id]);
+    const me = game.players.find((p: Player) => p.id === user.id);
+    if (me) setPlayer(me);
+  };
+
+  socket.on('game_state', handleGameState);
+
+  return () => {
+    socket.off('game_state', handleGameState);
+  };
+}, [socket, user?.id]);
+
 
   if (!socket || !user) {
     return (
