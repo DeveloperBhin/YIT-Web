@@ -1,45 +1,68 @@
 'use client';
 
-import { useContext, useEffect, useState } from 'react';
+import { useContext,useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SocketContext } from '@/context/SocketContext';
-import type { GameState } from '@/types/game';
+import GameRoom from '@/components/GameRoom';
+import type { Room, Player, GameState } from '@/types/game';
 
 export default function GameRoomPage() {
-  const { gameId } = useParams();
+  const { gameId } = useParams<{ gameId: string }>();
   const socket = useContext(SocketContext);
   const router = useRouter();
 
+  // 🔒 Page-level state (DO NOT gate rendering on gameState)
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
 
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleGameState = (state: GameState) => setGameState(state);
-
-    socket.on('game_state', handleGameState);
-    socket.emit('get_game_state', { gameId });
-
-    return () => {
-      socket.off('game_state', handleGameState);
-    };
-  }, [socket, gameId]);
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('token')
+      : null;
 
   const leaveGame = () => {
     if (!socket) return;
-    socket.emit('leave_game', { gameId, token });
+
+    socket.emit('leave_game', {
+      gameId,
+      token,
+    });
+
     router.push('/lobby');
   };
 
+  // ⛔ Important: do NOT render GameRoom until socket exists
+  if (!socket) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Connecting to server…
+      </div>
+    );
+  }
+
+  // ⛔ Still waiting for room/player bootstrap (from lobby or server)
+  if (!currentRoom || !player) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white">
+        Joining game room…
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B1E4F] text-white p-6">
-      <h1 className="text-3xl font-bold mb-4">🎮 Game Room {gameId}</h1>
-      {gameState ? <p>Players: {gameState.players?.length}</p> : <p>Loading...</p>}
-      <button onClick={leaveGame} className="bg-red-500 p-2 rounded mt-4">
-        Leave Game
-      </button>
+    <div className="min-h-screen bg-[#0B1E4F] text-white">
+    <GameRoom
+  socket={socket}
+  gameId={gameId}
+  gameState={gameState}
+  setGameState={setGameState}
+  currentRoom={currentRoom}
+  player={player}
+  userId={player.id}   // ✅ CORRECT
+  onLeaveRoom={leaveGame}
+/>
+
     </div>
   );
 }

@@ -11,25 +11,17 @@ interface GameState extends BaseGameState {
   gameStatus: 'waiting' | 'playing' | 'finished';
 }
 
-interface TokenPayload {
-  id: string;
-  first_name: string;
-  second_name: string;
-  email: string;
-  phone_number: string;
-}
-
 /* ---------- PROPS ---------- */
 
 interface GameRoomProps {
-  socket: Socket | null;
+  socket: Socket;
   gameId: string;
   gameState: GameState | null;
   setGameState: (state: GameState | null) => void;
-  currentRoom: Room | null;
-  player: Player | null;
+  currentRoom: Room;
+  player: Player;
   onLeaveRoom: () => void;
-  user: TokenPayload;
+  userId: string; // ✅ ONLY ID
 }
 
 /* ---------- COMPONENT ---------- */
@@ -42,41 +34,39 @@ export default function GameRoom({
   currentRoom,
   player,
   onLeaveRoom,
-  user,
+  userId,
 }: GameRoomProps) {
   const [playerCards, setPlayerCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
 
   /* ---------- DERIVED ---------- */
 
-  const canRequestState = useMemo(() => {
-    return Boolean(socket && gameId && user?.id);
-  }, [socket, gameId, user?.id]);
+  const ready = useMemo(
+    () => Boolean(socket && gameId && userId),
+    [socket, gameId, userId]
+  );
 
-  /* ---------- REQUEST GAME STATE (ONCE READY) ---------- */
+  /* ---------- REQUEST GAME STATE ---------- */
+
   useEffect(() => {
-    if (!canRequestState) return;
+    if (!ready) return;
 
-    console.log('📤 Requesting game state', {
-      gameId,
-      playerId: user.id,
-    });
+    console.log('📤 Requesting game state', { gameId, playerId: userId });
 
-    socket!.emit('get_game_state', {
+    socket.emit('get_game_state', {
       gameId,
-      playerId: user.id,
+      playerId: userId,
     });
-  }, [canRequestState, socket, gameId, user.id]);
+  }, [ready, socket, gameId, userId]);
 
   /* ---------- LISTEN FOR GAME STATE ---------- */
+
   useEffect(() => {
     if (!socket) return;
 
     console.log('🟢 GameRoom mounted → listening for game_state');
 
     const handleGameState = (payload: any) => {
-      console.log('🎮 game_state received:', payload);
-
       const game: GameState | undefined = payload?.game ?? payload;
 
       if (!game || !Array.isArray(game.players)) {
@@ -87,11 +77,11 @@ export default function GameRoom({
       setGameState(game);
       setLoading(false);
 
-      const me = game.players.find((p) => p.id === user.id);
+      const me = game.players.find((p) => p.id === userId);
 
       if (!me) {
         console.warn('⚠️ Player not found in game.players', {
-          expected: user.id,
+          expected: userId,
           received: game.players.map((p) => p.id),
         });
         return;
@@ -106,40 +96,28 @@ export default function GameRoom({
       console.log('🔴 GameRoom unmounted → removing listener');
       socket.off('game_state', handleGameState);
     };
-  }, [socket, user.id, setGameState]);
+  }, [socket, userId, setGameState]);
 
   /* ---------- ACTIONS ---------- */
 
   const handleDrawCard = () => {
-    if (!socket || !gameId) return;
-    socket.emit('draw_card', { gameId, playerId: user.id });
+    socket.emit('draw_card', { gameId, playerId: userId });
   };
 
   const handlePlayCard = (index: number, chosenColor: string | null = null) => {
-    if (!socket || !gameId) return;
-
     socket.emit('play_card', {
       gameId,
-      playerId: user.id,
+      playerId: userId,
       cardIndex: index,
       chosenColor,
     });
   };
 
   const handleStartGame = () => {
-    if (!socket || !gameId) return;
     socket.emit('start_game', { gameId });
   };
 
   /* ---------- GUARDS ---------- */
-
-  if (!socket || !currentRoom || !player) {
-    return (
-      <div className="p-4 text-center opacity-70">
-        Initializing game room…
-      </div>
-    );
-  }
 
   if (loading || !gameState) {
     return (
@@ -156,9 +134,7 @@ export default function GameRoom({
     <div className="p-4">
       {/* Header */}
       <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">
-          Game Room {currentRoom.gameId}
-        </h2>
+        <h2 className="text-xl font-bold">Game Room {currentRoom.gameId}</h2>
         <button
           className="bg-red-600 px-3 py-1 rounded"
           onClick={onLeaveRoom}
@@ -194,11 +170,11 @@ export default function GameRoom({
           players={gameState.players}
           currentPlayerId={gameState.currentPlayerId ?? ''}
           gameStatus={gameState.gameStatus}
-          currentUserId={user.id}
+          currentUserId={userId}
         />
       </div>
 
-      {/* Player Hand */}
+      {/* Hand */}
       <div className="mt-4">
         <h3 className="font-semibold">Your Hand:</h3>
 

@@ -164,7 +164,7 @@ export default function Dashboard() {
         gameState={gameState}
         setGameState={setGameState}
         onLeaveRoom={handleLeaveRoom}
-        user={user}
+       userId={user.id}   // ✅ FIX
       />
     </motion.div>
   ) : (
