@@ -76,35 +76,24 @@ export default function GameRoom({
 
     console.log('🟢 GameRoom mounted → listening for game_state');
 
-    const handleGameState = (payload: unknown) => {
-      const game = (payload as any)?.game ?? payload;
+   const handleGameState = (payload: any) => {
+  console.log('🔥 RAW payload:', payload);
 
-      if (
-        !game ||
-        !Array.isArray(game.players) ||
-        !game.gameStatus
-      ) {
-        console.error('❌ Invalid game_state payload', payload);
-        return;
-      }
+  // unwrap safely
+  const game = payload?.game ?? payload;
 
-      setGameState(game);
-      setLoading(false);
+  if (!game || !Array.isArray(game.players)) {
+    console.error('❌ Invalid game_state payload', payload);
+    return;
+  }
 
-      const me = game.players.find(
-        (p: Player) => p.id === userId
-      );
+  setGameState(game);
+  setLoading(false);
 
-      if (!me) {
-        console.warn('⚠️ Player not found in game.players', {
-          expected: userId,
-          received: game.players.map((p: Player) => p.id),
-        });
-        return;
-      }
+const me = game.players.find((p: Player) => p.id === userId);
+  if (me) setPlayerCards(me.cards ?? []);
+};
 
-      setPlayerCards(me.cards ?? []);
-    };
 
     socket.on('game_state', handleGameState);
     listenerAttached.current = true;
