@@ -185,16 +185,19 @@ export default function Dashboard() {
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            <GameRoom
-              socket={socket}
-              gameId={currentRoom.gameId}
-              currentRoom={currentRoom}
-              player={player!}
-              gameState={gameState}
-              setGameState={setGameState}
-              onLeaveRoom={handleLeaveRoom}
-              userId={user.id}
-            />
+           {currentRoom && player ? (
+  <GameRoom
+    socket={socket}
+    gameId={currentRoom.gameId}
+    currentRoom={currentRoom}
+    player={player}
+    gameState={gameState}
+    setGameState={setGameState}
+    onLeaveRoom={handleLeaveRoom}
+    userId={user.id}
+  />
+) : null}
+
           </motion.div>
         ) : (
           <motion.div

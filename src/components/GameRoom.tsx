@@ -64,9 +64,8 @@ export default function GameRoom({
     });
 
     socket.emit('get_game_state', {
-      gameId,
-      playerId: userId,
-    });
+  gameId,
+playerId:userId});
   }, [ready, socket, gameId, userId]);
 
   /* ---------- LISTEN FOR GAME STATE ---------- */
