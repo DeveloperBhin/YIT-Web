@@ -1,8 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Socket } from 'socket.io-client';
-import { GameState as BaseGameState, Player, Room, Card } from '../types/game';
+import {
+  GameState as BaseGameState,
+  Player,
+  Room,
+  Card,
+} from '../types/game';
 import PlayerList from './PlayerList';
 
 /* ---------- TYPES ---------- */
@@ -16,12 +21,12 @@ interface GameState extends BaseGameState {
 interface GameRoomProps {
   socket: Socket;
   gameId: string;
-  gameState: GameState | null;
-  setGameState: (state: GameState | null) => void;
   currentRoom: Room;
   player: Player;
+  userId: string;
+  gameState: GameState | null;
+  setGameState: (state: GameState | null) => void;
   onLeaveRoom: () => void;
-  userId: string; // ✅ ONLY ID
 }
 
 /* ---------- COMPONENT ---------- */
@@ -29,29 +34,34 @@ interface GameRoomProps {
 export default function GameRoom({
   socket,
   gameId,
-  gameState,
-  setGameState,
   currentRoom,
   player,
-  onLeaveRoom,
   userId,
+  gameState,
+  setGameState,
+  onLeaveRoom,
 }: GameRoomProps) {
   const [playerCards, setPlayerCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ---------- DERIVED ---------- */
+  /** prevent duplicate listeners in React strict mode */
+  const listenerAttached = useRef(false);
 
-  const ready = useMemo(
-    () => Boolean(socket && gameId && userId),
-    [socket, gameId, userId]
-  );
+  /* ---------- READY FLAG ---------- */
 
-  /* ---------- REQUEST GAME STATE ---------- */
+  const ready = useMemo(() => {
+    return Boolean(socket && gameId && userId);
+  }, [socket, gameId, userId]);
+
+  /* ---------- REQUEST GAME STATE (ONCE READY) ---------- */
 
   useEffect(() => {
     if (!ready) return;
 
-    console.log('📤 Requesting game state', { gameId, playerId: userId });
+    console.log('📤 Requesting game state', {
+      gameId,
+      playerId: userId,
+    });
 
     socket.emit('get_game_state', {
       gameId,
@@ -62,14 +72,18 @@ export default function GameRoom({
   /* ---------- LISTEN FOR GAME STATE ---------- */
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || listenerAttached.current) return;
 
     console.log('🟢 GameRoom mounted → listening for game_state');
 
-    const handleGameState = (payload: any) => {
-      const game: GameState | undefined = payload?.game ?? payload;
+    const handleGameState = (payload: unknown) => {
+      const game = (payload as any)?.game ?? payload;
 
-      if (!game || !Array.isArray(game.players)) {
+      if (
+        !game ||
+        !Array.isArray(game.players) ||
+        !game.gameStatus
+      ) {
         console.error('❌ Invalid game_state payload', payload);
         return;
       }
@@ -77,12 +91,14 @@ export default function GameRoom({
       setGameState(game);
       setLoading(false);
 
-      const me = game.players.find((p) => p.id === userId);
+      const me = game.players.find(
+        (p: Player) => p.id === userId
+      );
 
       if (!me) {
         console.warn('⚠️ Player not found in game.players', {
           expected: userId,
-          received: game.players.map((p) => p.id),
+          received: game.players.map((p: Player) => p.id),
         });
         return;
       }
@@ -91,20 +107,28 @@ export default function GameRoom({
     };
 
     socket.on('game_state', handleGameState);
+    listenerAttached.current = true;
 
     return () => {
       console.log('🔴 GameRoom unmounted → removing listener');
       socket.off('game_state', handleGameState);
+      listenerAttached.current = false;
     };
   }, [socket, userId, setGameState]);
 
   /* ---------- ACTIONS ---------- */
 
   const handleDrawCard = () => {
-    socket.emit('draw_card', { gameId, playerId: userId });
+    socket.emit('draw_card', {
+      gameId,
+      playerId: userId,
+    });
   };
 
-  const handlePlayCard = (index: number, chosenColor: string | null = null) => {
+  const handlePlayCard = (
+    index: number,
+    chosenColor: string | null = null
+  ) => {
     socket.emit('play_card', {
       gameId,
       playerId: userId,
@@ -117,13 +141,15 @@ export default function GameRoom({
     socket.emit('start_game', { gameId });
   };
 
-  /* ---------- GUARDS ---------- */
+  /* ---------- GUARD ---------- */
 
   if (loading || !gameState) {
     return (
       <div className="p-4 text-yellow-400">
         Waiting for game state…
-        <div className="text-xs opacity-60 mt-1">Game ID: {gameId}</div>
+        <div className="text-xs opacity-60 mt-1">
+          Game ID: {gameId}
+        </div>
       </div>
     );
   }
@@ -134,7 +160,9 @@ export default function GameRoom({
     <div className="p-4">
       {/* Header */}
       <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">Game Room {currentRoom.gameId}</h2>
+        <h2 className="text-xl font-bold">
+          Game Room {currentRoom.gameId}
+        </h2>
         <button
           className="bg-red-600 px-3 py-1 rounded"
           onClick={onLeaveRoom}
@@ -200,8 +228,13 @@ export default function GameRoom({
 
       {/* Debug */}
       <div className="mt-4 text-sm opacity-70">
-        <p><strong>Status:</strong> {gameState.gameStatus}</p>
-        <p><strong>Current Turn:</strong> {gameState.currentPlayerId}</p>
+        <p>
+          <strong>Status:</strong> {gameState.gameStatus}
+        </p>
+        <p>
+          <strong>Current Turn:</strong>{' '}
+          {gameState.currentPlayerId}
+        </p>
       </div>
     </div>
   );
