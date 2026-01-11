@@ -32,6 +32,9 @@ export default function Dashboard() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
 
+  // Debug: show all raw server events
+  const [rawGameState, setRawGameState] = useState<any>(null);
+
   // Decode JWT once on load
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -71,15 +74,15 @@ export default function Dashboard() {
     };
   }, [socket]);
 
+  // Debug snapshot
   useEffect(() => {
-  console.log('🧠 Dashboard state snapshot', {
-    currentRoom,
-    player,
-    gameState,
-  });
-}, [currentRoom, player, gameState]);
-
-
+    console.log('🧠 Dashboard state snapshot', {
+      currentRoom,
+      player,
+      gameState,
+      rawGameState,
+    });
+  }, [currentRoom, player, gameState, rawGameState]);
 
   // Leave room
   const handleLeaveRoom = () => {
@@ -89,13 +92,39 @@ export default function Dashboard() {
     setCurrentRoom(null);
     setPlayer(null);
     setGameState(null);
+    setRawGameState(null);
   };
 
   const particlesInit = async (engine: any) => {
     await loadFull(engine);
   };
 
-  // ✅ Show lobby immediately if socket exists, connection is optional
+  // Attach raw listener for debugging
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleGameState = (payload: any) => {
+      console.log('🔥 RAW payload from server:', payload);
+      setRawGameState(payload); // Save raw payload
+
+      const game = payload?.game ?? payload;
+      if (!game || !Array.isArray(game.players)) {
+        console.error('❌ Invalid game_state payload', payload);
+        return;
+      }
+
+      setGameState(game);
+      const me = game.players.find((p: Player) => p.id === user?.id);
+      if (me) setPlayer(me);
+    };
+
+    socket.on('game_state', handleGameState);
+
+    return () => {
+      socket.off('game_state', handleGameState);
+    };
+  }, [socket, user?.id]);
+
   if (!socket || !user) {
     return (
       <div className="relative min-h-screen flex items-center justify-center text-white bg-[#0B1E4F]">
@@ -146,46 +175,51 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-     <AnimatePresence>
-  {currentRoom ? (
-    <motion.div
-      key="gameRoom"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
-    >
-      <GameRoom
-        socket={socket}
-        gameId={currentRoom.gameId}
-        currentRoom={currentRoom}
-        player={player!}
-        gameState={gameState}
-        setGameState={setGameState}
-        onLeaveRoom={handleLeaveRoom}
-       userId={user.id}   // ✅ FIX
-      />
-    </motion.div>
-  ) : (
-    <motion.div
-      key="gameLobby"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
-    >
-      <GameLobby
-        socket={socket}
-        setCurrentRoom={setCurrentRoom}
-        setPlayer={setPlayer}
-        setGameState={setGameState}
-      />
-    </motion.div>
-  )}
-</AnimatePresence>
+      <AnimatePresence>
+        {currentRoom ? (
+          <motion.div
+            key="gameRoom"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
+          >
+            <GameRoom
+              socket={socket}
+              gameId={currentRoom.gameId}
+              currentRoom={currentRoom}
+              player={player!}
+              gameState={gameState}
+              setGameState={setGameState}
+              onLeaveRoom={handleLeaveRoom}
+              userId={user.id}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="gameLobby"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
+          >
+            <GameLobby
+              socket={socket}
+              setCurrentRoom={setCurrentRoom}
+              setPlayer={setPlayer}
+              setGameState={setGameState}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ---- DEBUG PANEL ---- */}
+      <div className="absolute bottom-0 left-0 right-0 max-h-64 overflow-auto bg-black/60 text-xs p-2 text-yellow-300 font-mono">
+        <strong>🛠 Raw server payload:</strong>
+        <pre>{JSON.stringify(rawGameState, null, 2)}</pre>
+      </div>
     </div>
   );
 }
